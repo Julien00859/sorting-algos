@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 import json
-from collections import defaultdict, ChainMap
+from collections import defaultdict, ChainMap, Counter
 from typing import List
 from random import shuffle
 from time import time
 from sys import argv
-from math import ceil, floor, log2
-from array import array
+from math import ceil, floor
 from itertools import tee, takewhile, count
 from copy import copy
 from operator import gt, lt, ge, le
@@ -40,11 +39,11 @@ def insertion_shifting(a: List[int], n: int):
     """Move each value to the left until this value is sorted"""
     for i in range(1, n):
         value = a[i]
-        i -= 1
-        while i and a[i] > value:
-            a[i] = a[i + 1]
-            i -= 1
-        a[i] = value
+        j = i
+        while j > 0 and a[j - 1] > value:
+            a[j] = a[j - 1]
+            j -= 1
+        a[j] = value
     return a
 
 @register
@@ -139,19 +138,20 @@ def is_sorted(iterable):
             return False
     return True
 
+def is_permutation_of(a: List[int], b: List[int]):
+    return Counter(a) == Counter(b)
+
 if __name__ == "__main__":
     size = int(argv[1]) if len(argv) > 1 else 100
-    order = int(log2(size) // 8)
     results = defaultdict(dict)
 
     if len(argv) > 2:
         funcs = filter(lambda f: f.__name__ in argv[2:], funcs)
 
     print("Array length:", size)
-    print("Using:", ["bytes", "shorts", "integers", "long", "long long"][order])
 
     print("\nCreating array... ", end="")
-    rnd_array = array("bhilq"[order], list(range(floor(-size / 2), floor(size / 2))))
+    rnd_array = list(range(floor(-size / 2), floor(size / 2)))
     print("ok\nShuffling... ", end="")
     shuffle(rnd_array)
     print("ok")
@@ -164,7 +164,7 @@ if __name__ == "__main__":
         print("Copying... ", end="", flush=True)
         tmp = copy(rnd_array)
         print("ok")
-        
+
         print("Sorting... ", end="", flush=True)
         before = time()
         sorted_array = func(tmp, size)
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         print("done, tooks {} seconds".format(round(after - before, 4)))
 
         print("Validating... ", end="", flush=True)
-        if is_sorted(sorted_array):
+        if is_sorted(sorted_array) and is_permutation_of(rnd_array, sorted_array):
             print("ok")
             results[func.__name__][str(size)] = after - before
         else:
@@ -190,4 +190,3 @@ if __name__ == "__main__":
 
     with open("results.json", "w") as jsonfile:
         json.dump(results, jsonfile, indent=2, sort_keys=True)
-
