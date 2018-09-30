@@ -11,6 +11,7 @@ from itertools import tee, takewhile, count
 from copy import copy
 from operator import gt, lt, ge, le
 from functools import partial
+from os.path import isfile
 
 funcs = []
 def register(func):
@@ -57,26 +58,6 @@ def selection(a: List[int], n: int):
         a[i], a[smallest] = a[smallest], a[i]
     return a
 
-@register
-def selection_double(a: List[int], n: int):
-    """Find smallest and biggest values, swap them with the i-th and the last i-th values"""
-    for i in range(int(n / 2)):
-        smallest = i
-        biggest = n - i - 1
-        for j in range(i, n - i):
-            if a[j] < a[smallest]:
-                smallest = j
-            if a[j] > a[biggest]:
-                biggest = j
-
-        big = a[biggest]
-        small = a[smallest]
-        a[smallest] = a[i]
-        a[biggest] = a[n - i - 1]
-        a[i] = small
-        a[n - i - 1] = big
-    return a
-
 def shell(a: List[int], n: int, gaps: List[int]):
     """:found on internet:"""
     for gap in gaps:
@@ -102,7 +83,7 @@ def shell_using_tokuda_sequence(a, n):
 
 @register
 def merge(a: List[int], n: int):
-    if n == 1:
+    if n <= 1 :
         pass
     elif n == 2:
         if a[0] > a[1]:
@@ -178,10 +159,13 @@ if __name__ == "__main__":
         else:
             print("error")
             if len(sorted_array) < 30:
+                print(rnd_array)
                 print(sorted_array)
-
-    with open("results.json") as jsonfile:
-        old_results = json.load(jsonfile)
+    if isfile("results.json"):
+        with open("results.json") as jsonfile:
+            old_results = json.load(jsonfile)
+    else:
+        old_results = {}
 
     for algo in results.keys() | old_results.keys():
         results[algo] = dict(ChainMap(
