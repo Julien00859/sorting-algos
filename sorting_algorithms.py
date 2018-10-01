@@ -118,43 +118,43 @@ def merge_recurcive(a: List[int], n: int):
     return a
 
 @register
-def merge_iteratif(a: List[int], n: int):
+def merge_iterative(a: List[int], n: int):
     if n <= 1:
         return a
 
-    b = list()
+    tmp = list()
     def fusion(lower, half, upper):
+        aa = a
         i = lower
         j = half
         while i < half and j < upper:
-            if a[i] < a[j]:
-                b.append(a[i])
+            if aa[i] < aa[j]:
+                tmp.append(aa[i])
                 i += 1
             else:
-                b.append(a[j])
+                tmp.append(aa[j])
                 j += 1
-        b.extend(a[i:half])
-        b.extend(a[j:upper])
+        tmp.extend(aa[i:half])
+        tmp.extend(aa[j:upper])
         for i in range(upper - 1, lower - 1, -1):
-            a[i] = b.pop()
+            aa[i] = tmp.pop()
 
-
-    steps = 2
+    half_steps = 1
+    steps = half_steps << 1
     while steps < n:
         for lower in range(0, n - steps, steps):
-            fusion(lower, lower + floor(steps / 2), lower + steps)
+            fusion(lower, lower + half_steps, lower + steps)
 
         lower += steps
-        fusion(lower, floor((lower + n) / 2), n)
+        fusion(lower, lower + half_steps, n)
 
-        steps *= 2
-    print(steps, n)
-    fusion(0, steps, n)
+        half_steps = steps
+        steps <<= 1
+    fusion(0, half_steps, n)
     return a
 
-
 @register
-def index(a: List[int], n: int):
+def linear(a: List[int], n: int):
     """Works only with linear values"""
     b = [0] * n
     m = min(a)
