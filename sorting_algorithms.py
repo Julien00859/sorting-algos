@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
 
-import json
-from collections import defaultdict, ChainMap, Counter
 from typing import List
-from random import shuffle
-from time import time
-from sys import argv
-from math import ceil, floor
+from math import ceil, floor, log2
 from itertools import tee, takewhile, count
-from copy import copy
 from operator import gt, lt, ge, le
 from functools import partial
-from os.path import isfile
+from collections import Counter
 
-funcs = []
+algorithms = []
 def register(func):
-    funcs.append(func)
+    algorithms.append(func)
     return func
+
+def is_sorted(iterable: list):
+    a_it, b_it = tee(iterable)
+    next(b_it, None)
+    for a, b in zip(a_it, b_it):
+        if a > b:
+            return False
+    return True
+
+
+def is_permutation_of(a: list, b: list):
+    return Counter(a) == Counter(b)
+
 
 @register
 def bubble(a, n):
@@ -82,16 +89,16 @@ def shell_using_tokuda_sequence(a, n):
     return shell(a, n, reversed(list(gaps)))
 
 @register
-def merge(a: List[int], n: int):
+def merge_recurcive(a: List[int], n: int):
     if n <= 1 :
         pass
     elif n == 2:
         if a[0] > a[1]:
             a[0], a[1] = a[1], a[0]
     else:
-        half = int(n / 2)
-        a1 = merge(a[:half], half)
-        a2 = merge(a[half:], n - half)
+        half = floor(n / 2)
+        a1 = merge_recurcive(a[:half], half)
+        a2 = merge_recurcive(a[half:], n - half)
 
         i = 0
         j = 0
@@ -110,67 +117,48 @@ def merge(a: List[int], n: int):
             j += 1
     return a
 
-def is_sorted(iterable):
-    """\forall i,j in \setN \land 0 <= i < j < n \implies a[i] <= a[j]"""
-    a_it, b_it = tee(iterable)
-    next(b_it, None)
-    for a, b in zip(a_it, b_it):
-        if a > b:
-            return False
-    return True
+@register
+def merge_iteratif(a: List[int], n: int):
+    if n <= 1:
+        return a
 
-def is_permutation_of(a: List[int], b: List[int]):
-    return Counter(a) == Counter(b)
-
-if __name__ == "__main__":
-    size = int(argv[1]) if len(argv) > 1 else 100
-    results = defaultdict(dict)
-
-    if len(argv) > 2:
-        funcs = filter(lambda f: f.__name__ in argv[2:], funcs)
-
-    print("Array length:", size)
-
-    print("\nCreating array... ", end="")
-    rnd_array = list(range(floor(-size / 2), floor(size / 2)))
-    print("ok\nShuffling... ", end="")
-    shuffle(rnd_array)
-    print("ok")
+    b = list()
+    def fusion(lower, half, upper):
+        i = lower
+        j = half
+        while i < half and j < upper:
+            if a[i] < a[j]:
+                b.append(a[i])
+                i += 1
+            else:
+                b.append(a[j])
+                j += 1
+        b.extend(a[i:half])
+        b.extend(a[j:upper])
+        for i in range(upper - 1, lower - 1, -1):
+            a[i] = b.pop()
 
 
-    for func in funcs:
-        print()
-        print("Algo:", func.__name__)
+    steps = 2
+    while steps < n:
+        for lower in range(0, n - steps, steps):
+            fusion(lower, lower + floor(steps / 2), lower + steps)
 
-        print("Copying... ", end="", flush=True)
-        tmp = copy(rnd_array)
-        print("ok")
+        lower += steps
+        fusion(lower, floor((lower + n) / 2), n)
 
-        print("Sorting... ", end="", flush=True)
-        before = time()
-        sorted_array = func(tmp, size)
-        after = time()
-        print("done, tooks {} seconds".format(round(after - before, 4)))
+        steps *= 2
+    print(steps, n)
+    fusion(0, steps, n)
+    return a
 
-        print("Validating... ", end="", flush=True)
-        if is_sorted(sorted_array) and is_permutation_of(rnd_array, sorted_array):
-            print("ok")
-            results[func.__name__][str(size)] = after - before
-        else:
-            print("error")
-            if len(sorted_array) < 30:
-                print(rnd_array)
-                print(sorted_array)
-    if isfile("results.json"):
-        with open("results.json") as jsonfile:
-            old_results = json.load(jsonfile)
-    else:
-        old_results = {}
 
-    for algo in results.keys() | old_results.keys():
-        results[algo] = dict(ChainMap(
-            results.get(algo, {}),
-            old_results.get(algo, {})))
+@register
+def index(a: List[int], n: int):
+    """Works only with linear values"""
+    b = [0] * n
+    m = min(a)
+    for e in a:
+        b[e - m] = e
+    return b
 
-    with open("results.json", "w") as jsonfile:
-        json.dump(results, jsonfile, indent=2, sort_keys=True)
