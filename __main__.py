@@ -70,19 +70,19 @@ def main():
 
         for func in functions:
             # Sort the array using selected algorithm
-            logging.info("\nAlgo: %s\n", func.__name__)
+            logging.warning("\nAlgo: %s\n", func.__name__)
 
             logging.info("Copying... ")
             tmp = copy(rnd_array)
             logging.info("ok\n")
 
-            logging.info("Sorting... ")
+            logging.warning("Sorting... ")
             try:
                 sorted_array, time_elapsed = func(tmp, size)
             except RestrictionError:
-                logging.info("restricted\n")
+                logging.warning("restricted\n")
             else:
-                logging.info("done, tooks %.4f seconds\n", time_elapsed)
+                logging.warning("done, tooks %.4f seconds\n", time_elapsed)
                 logging.info("Validating... ")
                 if is_sorted(sorted_array) and is_permutation_of(rnd_array, sorted_array):
                     logging.info("ok\n")
