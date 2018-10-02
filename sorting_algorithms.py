@@ -42,7 +42,7 @@ def is_linear(a: List[int], n: int):
     m2 = min(a, key=lambda x: x if x != m1 else float('inf'))
     M = max(a)
 
-    return m2 - m1 == 1 and M - m1 == n - 1
+    return m2 - m1 == 1 and M - m1 == n - 1 and len(set(a)) == len(a)
 
 def is_bounded(a: List[int], n: int):
     return max(a) - min(a) <= n - 1
@@ -176,14 +176,6 @@ def merge_iterative(a: List[int], n: int):
     fusion(0, half_steps, n)
     return a
 
-@register(is_linear)
-def assignment(a: List[int], n: int):
-    b = [0] * n
-    m = min(a)
-    for e in a:
-        b[e - m] = e
-    return b
-
 @register(is_bounded)
 def counting(a: List[int], n: int):
     """Works only if"""
@@ -202,3 +194,11 @@ def counting(a: List[int], n: int):
             a[i] = idx + m
             i += 1
     return a
+
+@register(is_linear)
+def assignment(a: List[int], n: int):
+    b = [0] * n
+    m = min(a)
+    for e in a:
+        b[e - m] = e
+    return b
