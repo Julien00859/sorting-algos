@@ -2,30 +2,53 @@
 
 from typing import List
 from math import ceil, floor, log2
-from itertools import tee, takewhile, count
+from itertools import tee, takewhile, count, accumulate
 from operator import gt, lt, ge, le
 from functools import partial
+from time import time
 from collections import Counter
+from functools import wraps
 
 algorithms = []
-def register(func):
-    algorithms.append(func)
-    return func
+def register(key=None):
+    def wrapper(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            if key is not None and not key(*args, **kwargs):
+                raise RestrictionError()
+            before = time()
+            return func(*args, **kwargs), time() - before
+        algorithms.append(wrapped)
+        return func  # Don't change the function itself
+    return wrapper
 
-def is_sorted(iterable: list):
-    a_it, b_it = tee(iterable)
+class RestrictionError(Exception):
+    pass
+
+def is_sorted(a: List[int]):
+    a_it, b_it = tee(a)
     next(b_it, None)
-    for a, b in zip(a_it, b_it):
-        if a > b:
+    for x, y in zip(a_it, b_it):
+        if x > y:
             return False
     return True
 
 
-def is_permutation_of(a: list, b: list):
+def is_permutation_of(a: List[int], b: List[int]):
     return Counter(a) == Counter(b)
 
+def is_linear(a: List[int], n: int):
+    m1 = min(a)
+    m2 = min(a, key=lambda x: x if x != m1 else float('inf'))
+    M = max(a)
 
-@register
+    return m2 - m1 == 1 and M - m1 == n - 1
+
+def is_bounded(a: List[int], n: int):
+    return max(a) - min(a) <= n - 1
+
+
+@register()
 def bubble(a, n):
     for i in range(n):
         for j in range(n - i - 1):
@@ -33,7 +56,7 @@ def bubble(a, n):
                 a[j], a[j + 1] = a[j + 1], a[j]
     return a
 
-@register
+@register()
 def insertion_swapping(a: List[int], n: int):
     """Move each value to the left until this value is sorted"""
     for i in range(1, n):
@@ -42,7 +65,7 @@ def insertion_swapping(a: List[int], n: int):
             i -= 1
     return a
 
-@register
+@register()
 def insertion_shifting(a: List[int], n: int):
     """Move each value to the left until this value is sorted"""
     for i in range(1, n):
@@ -54,7 +77,7 @@ def insertion_shifting(a: List[int], n: int):
         a[j] = value
     return a
 
-@register
+@register()
 def selection(a: List[int], n: int):
     """Find smallest value and swap it with the i-th value"""
     for i in range(n):
@@ -76,19 +99,19 @@ def shell(a: List[int], n: int, gaps: List[int]):
             a[i] = tmp
     return a
 
-@register
+@register()
 def shell_using_shell_sequence(a, n):
     seq_func = lambda k: floor(n / 2 ** (k + 1))
     gaps = takewhile(partial(le, 1), map(seq_func, count()))
     return shell(a, n, gaps)
 
-@register
+@register()
 def shell_using_tokuda_sequence(a, n):
     seq_func = lambda k: ceil((9 * (9/4) ** k - 4) / 5)
     gaps = takewhile(partial(gt, n), map(seq_func, count()))
     return shell(a, n, reversed(list(gaps)))
 
-@register
+@register()
 def merge_recurcive(a: List[int], n: int):
     if n <= 1 :
         pass
@@ -117,7 +140,7 @@ def merge_recurcive(a: List[int], n: int):
             j += 1
     return a
 
-@register
+@register()
 def merge_iterative(a: List[int], n: int):
     if n <= 1:
         return a
@@ -153,12 +176,29 @@ def merge_iterative(a: List[int], n: int):
     fusion(0, half_steps, n)
     return a
 
-@register
-def linear(a: List[int], n: int):
-    """Works only with linear values"""
+@register(is_linear)
+def assignment(a: List[int], n: int):
     b = [0] * n
     m = min(a)
     for e in a:
         b[e - m] = e
     return b
 
+@register(is_bounded)
+def counting(a: List[int], n: int):
+    """Works only if"""
+    b = [0] * n
+    m = min(a)
+    M = max(a)
+    if M - m > n:
+        return b
+
+    for i in range(n):
+        b[a[i] - m] += 1
+
+    i = 0
+    for idx, count in enumerate(b):
+        for _ in range(count):
+            a[i] = idx + m
+            i += 1
+    return a

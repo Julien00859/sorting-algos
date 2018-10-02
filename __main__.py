@@ -4,7 +4,6 @@ import json
 import logging
 from collections import defaultdict, ChainMap
 from random import randrange, shuffle
-from time import time
 from sys import argv
 from copy import copy
 from os.path import isfile
@@ -12,18 +11,18 @@ from argparse import ArgumentParser
 from pprint import pformat
 from math import floor
 
-from sorting_algorithms import algorithms, is_sorted, is_permutation_of
+from sorting_algorithms import algorithms, is_sorted, is_permutation_of, RestrictionError
 
 
 def main():
     # Get options from the command line
     parser = ArgumentParser()
-    parser.add_argument("sizes", type=int, nargs="*", default=[128], help="Array sizes (default: 128)")
+    parser.add_argument("sizes", type=int, nargs="*", default=[128], help="Array sizes (default: [128])")
     parser.add_argument("-a", "--algo", dest="algos", action="append", help="Sorting algorithms to use (default: all)")
-    parser.add_argument("--no-duplicates", dest="allow_duplicates", action="store_false", default=True, help="Force different values")
-    parser.add_argument("--no-negatives", dest="allow_negatives", action="store_false", default=True, help="Force positives values")
+    parser.add_argument("--linear", dest="linear", action="store_true", default=False, help="Shuffle a range of elements")
+    parser.add_argument("--bounded", dest="bounded", action="store_true", default=False, help="Randomly select values from -size/2 to size/2")
     parser.add_argument("--save", action="store_true", default=False, help="Save times on disk")
-    parser.add_argument("--array", action="store")
+    parser.add_argument("--array", action="store", help="Use this specific json array instead of a random one")
     parser.add_argument("-v", "--verbose", dest="verbosity", action="count", default=0, help="Increase verbosity")
     options = parser.parse_args()
 
@@ -54,21 +53,14 @@ def main():
         logging.info("\n=====\n\n")
         logging.info("Array size: %d\n", size)
         if not options.array:
-            logging.info("Setting array boundaries... ")
-            if options.allow_negatives:
-                lower_bound = floor(-size / 2)
-                upper_bound = floor(size / 2)
-            else:
-                lower_bound = 0
-                upper_bound = size
-            logging.info("ok, from %d to %d\n", lower_bound, upper_bound - 1)
-            
             logging.info("Creating and shuffling array... ")
-            if options.allow_duplicates:
-                rnd_array = [randrange(lower_bound, upper_bound) for _ in range(size)]
-            else:
-                rnd_array = list(range(lower_bound, upper_bound))
+            if options.linear:
+                rnd_array = list(range(floor(-size / 2), floor(size / 2)))
                 shuffle(rnd_array)
+            elif options.bounded:
+                rnd_array = [randrange(floor(-size / 2), floor(size / 2)) for _ in range(size)]
+            else:
+                rnd_array = [randrange(-size, size) for _ in range(size)]
             logging.info("ok, ")
         if size >= 5:
             sample = rnd_array[:2] + ["..."] + rnd_array[-2:]
@@ -85,21 +77,22 @@ def main():
             logging.info("ok\n")
 
             logging.info("Sorting... ")
-            before = time()
-            sorted_array = func(tmp, size)
-            after = time()
-            logging.info("done, tooks %.4f seconds\n", after - before)
-
-            logging.info("Validating... ")
-            if is_sorted(sorted_array) and is_permutation_of(rnd_array, sorted_array):
-                logging.info("ok\n")
-                results[func.__name__]["{: 7d}".format(size)] = after - before
+            try:
+                sorted_array, time_elapsed = func(tmp, size)
+            except RestrictionError:
+                logging.info("restricted\n")
             else:
-                logging.info("error\n")
-                with open("error.json", "a") as file:
-                    json.dump({"random": rnd_array, "sorted": sorted_array}, file)
-                    file.write("\n")
-                logging.warning("An error occured with algo %s. A full report has been written to \"error.json\"\n", func.__name__)
+                logging.info("done, tooks %.4f seconds\n", time_elapsed)
+                logging.info("Validating... ")
+                if is_sorted(sorted_array) and is_permutation_of(rnd_array, sorted_array):
+                    logging.info("ok\n")
+                    results[func.__name__]["{: 7d}".format(size)] = time_elapsed
+                else:
+                    logging.info("error\n")
+                    with open("error.json", "a") as file:
+                        json.dump({"random": rnd_array, "sorted": sorted_array}, file)
+                        file.write("\n")
+                    logging.warning("An error occured with algo %s. A full report has been written to \"error.json\"\n", func.__name__)
 
     # If saving the output is not required, exit now
     if not options.save:
