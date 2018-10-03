@@ -112,35 +112,6 @@ def shell_using_tokuda_sequence(a, n):
     return shell(a, n, reversed(list(gaps)))
 
 @register()
-def merge_recurcive(a: List[int], n: int):
-    if n <= 1 :
-        pass
-    elif n == 2:
-        if a[0] > a[1]:
-            a[0], a[1] = a[1], a[0]
-    else:
-        half = floor(n / 2)
-        a1 = merge_recurcive(a[:half], half)
-        a2 = merge_recurcive(a[half:], n - half)
-
-        i = 0
-        j = 0
-        while i < half and j < (n - half):
-            if a1[i] < a2[j]:
-                a[i + j] = a1[i]
-                i += 1
-            else:
-                a[i + j] = a2[j]
-                j += 1
-        while i < half:
-            a[i + j] = a1[i]
-            i += 1
-        while j < (n - half):
-            a[i + j] = a2[j]
-            j += 1
-    return a
-
-@register()
 def merge_iterative(a: List[int], n: int):
     if n <= 1:
         return a
@@ -174,6 +145,65 @@ def merge_iterative(a: List[int], n: int):
         half_steps = steps
         steps <<= 1
     fusion(0, half_steps, n)
+    return a
+
+@register()
+def quick_recurcive(a: List[int], n: int):
+    if n <= 1:
+        return a
+    elif n == 2:
+        if a[0] > a[1]:
+            a[0], a[1] = a[1], a[0]
+
+    lowers = []
+    lowers_cnt = 0
+    equals = []
+    highers = []
+    highers_cnt = 0
+
+    pivot = a[floor(n / 2)]
+    for i in range(n):
+        if a[i] < pivot:
+            lowers.append(a[i])
+            lowers_cnt += 1
+        elif a[i] > pivot:
+            highers.append(a[i])
+            highers_cnt += 1
+        else:
+            equals.append(a[i])
+    
+    b = quick_recurcive(lowers, lowers_cnt)
+    b.extend(equals)
+    b.extend(quick_recurcive(highers, highers_cnt))
+    return b
+
+@register()
+def merge_recurcive(a: List[int], n: int):
+    if n <= 1 :
+        pass
+    elif n == 2:
+        if a[0] > a[1]:
+            a[0], a[1] = a[1], a[0]
+    else:
+        half = floor(n / 2)
+        a1 = merge_recurcive(a[:half], half)
+        a2 = merge_recurcive(a[half:], n - half)
+
+        i = 0
+        j = 0
+        while i < half and j < (n - half):
+            if a1[i] < a2[j]:
+                a[i + j] = a1[i]
+                i += 1
+            else:
+                a[i + j] = a2[j]
+                j += 1
+        while i < half:
+            a[i + j] = a1[i]
+            i += 1
+        while j < (n - half):
+            a[i + j] = a2[j]
+            j += 1
     return a
 
 @register(is_bounded)
