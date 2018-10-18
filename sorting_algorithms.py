@@ -8,6 +8,7 @@ from functools import partial
 from time import time
 from collections import Counter
 from functools import wraps
+from heap import Heap
 
 algorithms = []
 def register(key=None):
@@ -87,6 +88,12 @@ def selection(a: List[int], n: int):
                 smallest = j
         a[i], a[smallest] = a[smallest], a[i]
     return a
+
+@register()
+def heap(a: List[int], n: int):
+    h = Heap(a)
+    h.sort()
+    return h
 
 def shell(a: List[int], n: int, gaps: List[int]):
     """:found on internet:"""
@@ -179,7 +186,7 @@ def quick_recurcive(a: List[int], n: int):
 
 @register()
 def merge_recurcive(a: List[int], n: int):
-    if n <= 1 :
+    if n <= 1:
         pass
     elif n == 2:
         if a[0] > a[1]:
@@ -205,6 +212,26 @@ def merge_recurcive(a: List[int], n: int):
             a[i + j] = a2[j]
             j += 1
     return a
+
+def real_merge_cheat(a, start, end):
+    if (start < end):
+        mid = (start + end) // 2
+        tmp = real_merge_cheat(a, start, mid)
+        tmp.extend(reversed(real_merge_cheat(a, mid + 1, end)))
+        i = 0
+        j = end - start
+        for k in range(start, end + 1):
+            if (tmp[i] <= tmp[j]):
+                a[k] = tmp[i]
+                i += 1
+            else:
+                a[k] = tmp[j]
+                j -= 1
+    return a[start:end+1]
+
+@register()
+def merge_cheat(a: List[int], n: int):
+    return real_merge_cheat(a, 0, n - 1)
 
 @register(is_bounded)
 def counting(a: List[int], n: int):
