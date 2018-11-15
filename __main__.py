@@ -15,10 +15,13 @@ from sorting_algorithms import algorithms, is_sorted, is_permutation_of, Restric
 
 
 def main():
+    global algorithms
+
     # Get options from the command line
     parser = ArgumentParser()
     parser.add_argument("sizes", type=int, nargs="*", default=[128], help="Array sizes (default: [128])")
     parser.add_argument("-a", "--algo", dest="algos", action="append", help="Sorting algorithms to use (default: all)")
+    parser.add_argument("-s", "--notalgo", dest="notalgos", action="append", help="Sorting algorithms to not use (default: none)")
     parser.add_argument("--linear", dest="linear", action="store_true", default=False, help="Shuffle a range of elements")
     parser.add_argument("--bounded", dest="bounded", action="store_true", default=False, help="Randomly select values from -size/2 to size/2")
     parser.add_argument("--save", action="store_true", default=False, help="Save times on disk")
@@ -38,9 +41,9 @@ def main():
     # Filter algorithms
     logging.info("Filtering algorithms... ")
     if options.algos:
-        functions = list(filter(lambda f: f.__name__ in options.algos, algorithms))
-    else:
-        functions = algorithms
+        algorithms = list(filter(lambda f: f.__name__ in options.algos, algorithms))
+    if options.notalgos:
+        algorithms = list(filter(lambda f: f.__name__ not in options.notalgos, algorithms))
     logging.info("ok\n")
 
     if options.array:
@@ -68,7 +71,7 @@ def main():
         else:
             logging.info("[%s]\n", ", ".join(map(str, rnd_array)))
 
-        for func in functions:
+        for func in algorithms:
             # Sort the array using selected algorithm
             logging.warning("\nAlgo: %s\n", func.__name__)
 
