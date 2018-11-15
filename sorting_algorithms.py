@@ -2,7 +2,7 @@
 
 from typing import List
 from math import ceil, floor, log2
-from itertools import tee, takewhile, count, accumulate
+from itertools import tee, takewhile, count, accumulate, permutations
 from operator import gt, lt, ge, le
 from functools import partial
 from time import time
@@ -48,6 +48,11 @@ def is_linear(a: List[int], n: int):
 def is_bounded(a: List[int], n: int):
     return max(a) - min(a) <= n - 1
 
+@register()
+def bongo(a, n):
+    for perm in permutations(a, n):
+        if is_sorted(perm):
+            return perm
 
 @register()
 def bubble(a, n):
