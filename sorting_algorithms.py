@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
+from threading import Thread, Event
 from typing import List
 from math import ceil, floor, log2
 from itertools import tee, takewhile, count, accumulate, permutations
 from operator import gt, lt, ge, le
 from functools import partial
-from time import time
+from time import time, sleep as sleep_
 from collections import Counter
 from functools import wraps
 from heap import Heap
@@ -49,10 +50,29 @@ def is_bounded(a: List[int], n: int):
     return max(a) - min(a) <= n - 1
 
 @register()
-def bongo(a, n):
+def bogo(a, n):
     for perm in permutations(a, n):
         if is_sorted(perm):
             return perm
+
+@register()
+def sleep(a, n):
+    m = min(a)
+    b = []
+    threads = []
+    start = Event()
+    def wait(x):
+        start.wait()
+        sleep_((x - m) / 100)
+        b.append(x)
+    for x in a:
+        th = Thread(target=wait, args=(x,))
+        th.start()
+        threads.append(th)
+    start.set()
+    for th in threads:
+        th.join()
+    return b
 
 @register()
 def bubble(a, n):
