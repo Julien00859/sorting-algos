@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 
 from collections import UserList
-import random
-import math
-from time import time
+
 
 class Heap(UserList):
     def __init__(self, array):
@@ -61,4 +59,3 @@ class Heap(UserList):
 
     def __repr__(self):
         return "<Heap [{}]>".format(", ".join(self.data))
-

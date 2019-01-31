@@ -1,70 +1,59 @@
 #!/usr/bin/env python3
 
+from functools import partial, wraps
+from itertools import takewhile, count, permutations
+from math import ceil, floor
+from operator import gt, le
 from threading import Thread, Event
-from typing import List
-from math import ceil, floor, log2
-from itertools import tee, takewhile, count, accumulate, permutations
-from operator import gt, lt, ge, le
-from functools import partial
 from time import time, sleep as sleep_
-from collections import Counter
-from functools import wraps
+from typing import List, Any
+
+from checks import is_numeric, is_bounded, is_linear, is_sorted
 from heap import Heap
 
+
+class RestrictionError(Exception):
+    def __init__(self, function):
+        return super().__init__("restricted by %s" % function.__name__)
+    pass
+
+
 algorithms = []
-def register(key=None):
+def register(*checks):
     def wrapper(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
-            if key is not None and not key(*args, **kwargs):
-                raise RestrictionError()
+            for check in checks:
+                if not check(*args, **kwargs):
+                    raise RestrictionError(check)
             before = time()
             return func(*args, **kwargs), time() - before
         algorithms.append(wrapped)
         return func  # Don't change the function itself
     return wrapper
 
-class RestrictionError(Exception):
-    pass
-
-def is_sorted(a: List[int]):
-    a_it, b_it = tee(a)
-    next(b_it, None)
-    for x, y in zip(a_it, b_it):
-        if x > y:
-            return False
-    return True
-
-
-def is_permutation_of(a: List[int], b: List[int]):
-    return Counter(a) == Counter(b)
-
-def is_linear(a: List[int], n: int):
-    m1 = min(a)
-    m2 = min(a, key=lambda x: x if x != m1 else float('inf'))
-    M = max(a)
-
-    return m2 - m1 == 1 and M - m1 == n - 1 and len(set(a)) == len(a)
-
-def is_bounded(a: List[int], n: int):
-    return max(a) - min(a) <= n - 1
 
 @register()
-def bogo(a, n):
+def bogo(a: List[Any], n: int):
+    """Generate all the permutations of ``a``, returns the sorted one"""
     for perm in permutations(a, n):
         if is_sorted(perm):
             return perm
 
-@register()
-def sleep(a, n):
+
+@register(is_numeric)
+def sleep(a: List[int], n: int):
+    """Sleep the time of each value to append the value to a new list"""
     m = min(a)
     b = []
     threads = []
     start = Event()
+
     def wait(x):
         start.wait()
         sleep_((x - m) / 100)
         b.append(x)
+
     for x in a:
         th = Thread(target=wait, args=(x,))
         th.start()
@@ -74,16 +63,19 @@ def sleep(a, n):
         th.join()
     return b
 
+
 @register()
-def bubble(a, n):
+def bubble(a: List[Any], n: int):
+    """Swap each neighbore until they are all sorted"""
     for i in range(n):
         for j in range(n - i - 1):
             if a[j] > a[j + 1]:
                 a[j], a[j + 1] = a[j + 1], a[j]
     return a
 
+
 @register()
-def insertion_swapping(a: List[int], n: int):
+def insertion_swapping(a: List[Any], n: int):
     """Move each value to the left until this value is sorted"""
     for i in range(1, n):
         while i and a[i - 1] > a[i]:
@@ -91,8 +83,9 @@ def insertion_swapping(a: List[int], n: int):
             i -= 1
     return a
 
+
 @register()
-def insertion_shifting(a: List[int], n: int):
+def insertion_shifting(a: List[Any], n: int):
     """Move each value to the left until this value is sorted"""
     for i in range(1, n):
         value = a[i]
@@ -103,8 +96,9 @@ def insertion_shifting(a: List[int], n: int):
         a[j] = value
     return a
 
+
 @register()
-def selection(a: List[int], n: int):
+def selection(a: List[Any], n: int):
     """Find smallest value and swap it with the i-th value"""
     for i in range(n):
         smallest = i
@@ -114,13 +108,16 @@ def selection(a: List[int], n: int):
         a[i], a[smallest] = a[smallest], a[i]
     return a
 
+
 @register()
-def heap(a: List[int], n: int):
+def heap(a: List[Any], n: int):
+    """Sequentially heapify the list and pop the largest element"""
     h = Heap(a)
     h.sort()
     return h
 
-def shell(a: List[int], n: int, gaps: List[int]):
+
+def shell(a: List[Any], n: int, gaps: List[int]):
     """:found on internet:"""
     for gap in gaps:
         for i in range(gap, n):
@@ -131,20 +128,23 @@ def shell(a: List[int], n: int, gaps: List[int]):
             a[i] = tmp
     return a
 
+
 @register()
-def shell_using_shell_sequence(a, n):
+def shell_using_shell_sequence(a: List[Any], n: int):
     seq_func = lambda k: floor(n / 2 ** (k + 1))
     gaps = takewhile(partial(le, 1), map(seq_func, count()))
     return shell(a, n, gaps)
 
+
 @register()
-def shell_using_tokuda_sequence(a, n):
+def shell_using_tokuda_sequence(a: List[Any], n: int):
     seq_func = lambda k: ceil((9 * (9/4) ** k - 4) / 5)
     gaps = takewhile(partial(gt, n), map(seq_func, count()))
     return shell(a, n, reversed(list(gaps)))
 
+
 @register()
-def merge_iterative(a: List[int], n: int):
+def merge_iterative(a: List[Any], n: int):
     if n <= 1:
         return a
 
@@ -179,8 +179,9 @@ def merge_iterative(a: List[int], n: int):
     fusion(0, half_steps, n)
     return a
 
+
 @register()
-def quick_recurcive(a: List[int], n: int):
+def quick_recurcive(a: List[Any], n: int):
     if n <= 1:
         return a
     elif n == 2:
@@ -203,14 +204,15 @@ def quick_recurcive(a: List[int], n: int):
             highers_cnt += 1
         else:
             equals.append(a[i])
-    
+
     b = quick_recurcive(lowers, lowers_cnt)
     b.extend(equals)
     b.extend(quick_recurcive(highers, highers_cnt))
     return b
 
+
 @register()
-def merge_recurcive(a: List[int], n: int):
+def merge_recurcive(a: List[Any], n: int):
     if n <= 1:
         pass
     elif n == 2:
@@ -238,46 +240,23 @@ def merge_recurcive(a: List[int], n: int):
             j += 1
     return a
 
-def real_merge_cheat(a, start, end):
-    if (start < end):
-        mid = (start + end) // 2
-        tmp = real_merge_cheat(a, start, mid)
-        tmp.extend(reversed(real_merge_cheat(a, mid + 1, end)))
-        i = 0
-        j = end - start
-        for k in range(start, end + 1):
-            if (tmp[i] <= tmp[j]):
-                a[k] = tmp[i]
-                i += 1
-            else:
-                a[k] = tmp[j]
-                j -= 1
-    return a[start:end+1]
 
-@register()
-def merge_cheat(a: List[int], n: int):
-    return real_merge_cheat(a, 0, n - 1)
-
-@register(is_bounded)
+@register(is_numeric, is_bounded)
 def counting(a: List[int], n: int):
-    """Works only if"""
     b = [0] * n
     m = min(a)
-    M = max(a)
-    if M - m > n:
-        return b
-
     for i in range(n):
         b[a[i] - m] += 1
 
     i = 0
-    for idx, count in enumerate(b):
-        for _ in range(count):
+    for idx, cnt in enumerate(b):
+        for _ in range(cnt):
             a[i] = idx + m
             i += 1
     return a
 
-@register(is_linear)
+
+@register(is_numeric, is_linear)
 def assignment(a: List[int], n: int):
     b = [0] * n
     m = min(a)
