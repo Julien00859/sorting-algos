@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from functools import partial, wraps
-from itertools import takewhile, count, permutations
+from itertools import takewhile, count, permutations, chain
 from math import ceil, floor
 from operator import gt, le
 from threading import Thread, Event
@@ -238,6 +238,18 @@ def merge_recurcive(a: List[Any], n: int):
         while j < (n - half):
             a[i + j] = a2[j]
             j += 1
+    return a
+
+
+@register(is_numeric)
+def radix_lsd(a: List[int], n: int):
+    length = max(a).bit_length()
+    for i in range(0, length + 1, 2):
+        twobits = [[] for i in range(4)]
+        window = 0b11 << i
+        for j in range(len(a)):
+            twobits[(a[j] & window) >> i].append(a[j])
+        a = list(chain(*twobits))
     return a
 
 
