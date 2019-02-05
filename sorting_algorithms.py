@@ -3,7 +3,7 @@
 from functools import partial, wraps
 from itertools import takewhile, count, permutations, chain
 from math import ceil, floor
-from operator import gt, le
+from operator import gt, le, methodcaller
 from threading import Thread, Event
 from time import time, sleep as sleep_
 from typing import List, Any
@@ -243,14 +243,22 @@ def merge_recurcive(a: List[Any], n: int):
 
 @register(is_numeric)
 def radix_lsd(a: List[int], n: int):
-    length = max(a).bit_length()
+    length = max(map(methodcaller('bit_length'), a))
+
+    # Sort the values
     for i in range(0, length + 1, 2):
-        twobits = [[] for i in range(4)]
+        twobits = ([], [], [], [])
         window = 0b11 << i
         for j in range(len(a)):
             twobits[(a[j] & window) >> i].append(a[j])
         a = list(chain(*twobits))
-    return a
+
+    # Sort the sign
+    sign = ([], [])
+    window = 1 << length + 1
+    for j in range(len(a)):
+        sign[(a[j] & window) >> length + 1].append(a[j])
+    return [*sign[1], *sign[0]]
 
 
 @register(is_numeric, is_bounded)
