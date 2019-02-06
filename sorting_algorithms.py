@@ -243,19 +243,35 @@ def merge_recurcive(a: List[Any], n: int):
 
 @register(is_numeric)
 def radix_lsd(a: List[int], n: int):
+    """Sort by sorting units then decades then hundreds..."""
+
     length = max(map(methodcaller('bit_length'), a))
 
-    # Sort the values
+    # Binary-wise unit is the least significant bit, decades is
+    # the second lsb and so on. We use a window to select the
+    # current bits (two at a time to be a bit faster) and then
+    # shift the &-ed value. The resulted values can either be
+    # 00, 01, 10 or 11, we use that value as the array index
+    # where to store the number.
     for i in range(0, length + 1, 2):
-        twobits = ([], [], [], [])
-        window = 0b11 << i
+        units_selector = 0b11 << i              # Move the selector to select the two next bits
+        units_values = ([], [], [], [])         # 2 bits => 4 possible values
         for j in range(len(a)):
-            twobits[(a[j] & window) >> i].append(a[j])
-        a = list(chain(*twobits))
+            value = a[j]
+            selection = value & units_selector  # Select the bits
+            unit = selection >> i               # Shift the selection to have 00, 01, 10 or 11
+            units_values[unit].append(value)    # Append the value to the corresponding slot
 
-    # Sort the sign
-    sign = ([], [])
+        a = list(chain(*units_values))          # Merge the lists, values are sorted on all the
+                                                #  previous bits
+
+    # In two-complement, values with 1 as most-significant bit
+    # are negatives and values with 0 as msb are positives.
+    # Due to that, negatives values show after positives one,
+    # the following code place the windows on one sign bit to
+    # replace negatives values before.
     window = 1 << length + 1
+    sign = ([], [])
     for j in range(len(a)):
         sign[(a[j] & window) >> length + 1].append(a[j])
     return [*sign[1], *sign[0]]
