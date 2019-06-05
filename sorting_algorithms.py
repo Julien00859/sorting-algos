@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from functools import partial, wraps
 from itertools import takewhile, count, permutations, chain
 from math import ceil, floor
